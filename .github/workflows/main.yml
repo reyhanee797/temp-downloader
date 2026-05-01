@@ -32,12 +32,40 @@ jobs:
         run: |
           cd downloads
 
-          FILE=$(basename "${URL}")
-          curl -L "${URL}" -o "$FILE"
-
+                - name: Download file
+        id: download
+        run: |
+          cd downloads
+          
+          # Extract filename from URL safely
+          RAW_FILENAME=$(basename "${URL}" | sed 's/?.*//' | sed 's/#.*//')
+          # Remove any problematic characters
+          FILE=$(echo "$RAW_FILENAME" | sed 's/[^a-zA-Z0-9._-]/_/g')
+          
+          # If no valid filename, use a default
+          if [ -z "$FILE" ]; then
+            FILE="downloaded_file"
+          fi
+          
+          echo "Downloading to: $FILE"
+          
+          # Download with error handling and retry
+          curl -L --fail --retry 3 --retry-delay 2 -o "$FILE" "${URL}"
+          
+          # Check if download succeeded
+          if [ ! -f "$FILE" ]; then
+            echo "Error: Download failed - file not created"
+            exit 1
+          fi
+          
+          if [ ! -s "$FILE" ]; then
+            echo "Error: Downloaded file is empty"
+            exit 1
+          fi
+          
           SIZE=$(stat -c%s "$FILE")
           HASH=$(sha256sum "$FILE" | cut -d ' ' -f1)
-
+          
           echo "filename=$FILE" >> $GITHUB_OUTPUT
           echo "size=$SIZE" >> $GITHUB_OUTPUT
           echo "sha256=$HASH" >> $GITHUB_OUTPUT
