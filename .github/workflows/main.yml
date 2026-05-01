@@ -31,20 +31,22 @@ jobs:
         id: download
         run: |
           cd downloads
-          
-          # Extract filename from URL safely
+
+          # Extract filename from URL and sanitize
           RAW_FILENAME=$(basename "${URL}" | sed 's/\?.*//' | sed 's/#.*//')
-          # Remove any problematic characters
-          FILE=$(echo "$RAW_FILENAME" | sed 's/[^a-zA-Z0-9._-]/_/g')
+          # Remove ALL invalid characters for artifacts: < > : " | ? *
+          FILE=$(echo "$RAW_FILENAME" | sed 's/[<>:"|?*]/_/g')
+          # Also clean up slashes
+          FILE=$(echo "$FILE" | sed 's/[\\/]/_/g')
           
           # If no valid filename, use a default
-          if [ -z "$FILE" ]; then
+          if [ -z "$FILE" ] || [[ "$FILE" == .* ]]; then
             FILE="downloaded_file"
           fi
           
           echo "Downloading to: $FILE"
           
-          # Download with error handling and retry
+          # Download with error handling
           curl -L --fail --retry 3 --retry-delay 2 -o "$FILE" "${URL}"
           
           # Check if download succeeded
