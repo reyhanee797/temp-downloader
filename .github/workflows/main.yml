@@ -31,14 +31,9 @@ jobs:
         id: download
         run: |
           cd downloads
-
-                - name: Download file
-        id: download
-        run: |
-          cd downloads
           
           # Extract filename from URL safely
-          RAW_FILENAME=$(basename "${URL}" | sed 's/?.*//' | sed 's/#.*//')
+          RAW_FILENAME=$(basename "${URL}" | sed 's/\?.*//' | sed 's/#.*//')
           # Remove any problematic characters
           FILE=$(echo "$RAW_FILENAME" | sed 's/[^a-zA-Z0-9._-]/_/g')
           
