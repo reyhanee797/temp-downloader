@@ -25,7 +25,12 @@ jobs:
       - name: Prepare folders
         run: |
           mkdir -p downloads
-          mkdir -p site
+          mkdir -p site    
+          
+      - name: Update CA certificates
+        run: |
+           sudo apt-get update
+           sudo apt-get install --reinstall ca-certificates -y
 
       - name: Download file
         id: download
