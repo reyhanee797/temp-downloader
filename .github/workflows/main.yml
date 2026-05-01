@@ -122,19 +122,9 @@ jobs:
           git config pack.depth 0
           git config pack.threads 1
 
-      - name: Upload parts incrementally (fastest)
-        run: |
-          cd downloads
-
-          for f in *; do
-            echo "Uploading $f ..."
-            git add "$f"
-            git commit -m "Add part $f from URL: ${{ inputs.URL }}"
-            git push
-          done
-
-      - name: Upload index file
-        run: |
-          git add site/files.json
-          git commit -m "Add index for file ${{ inputs.URL }}" || echo "no changes"
-          git push
+      - name: Upload as artifact (download from here)
+        uses: actions/upload-artifact@v4
+        with:
+          name: downloaded-file
+          path: downloads/
+          retention-days: 7
