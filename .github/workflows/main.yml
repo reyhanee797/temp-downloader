@@ -30,17 +30,16 @@ jobs:
       - name: Update CA certificates
         run: |
            sudo apt-get update
-           sudo apt-get install --reinstall ca-certificates -y      
-           
+           sudo apt-get install --reinstall ca-certificates -y       
       - name: Download file
         id: download
         run: |
           cd downloads
           
-          # Extract filename from URL safely
-          RAW_FILENAME=$(basename "${URL}" | sed 's/?.*//' | sed 's/#.*//')
-          # Remove any problematic characters
-          FILE=$(echo "$RAW_FILENAME" | sed 's/[^a-zA-Z0-9._-]/_/g')
+          # Extract filename from URL and sanitize IMMEDIATELY
+          RAW_FILENAME=$(basename "${URL}" | sed 's/\?.*//' | sed 's/#.*//')
+          # Remove ALL invalid characters: < > : " | ? *
+          FILE=$(echo "$RAW_FILENAME" | sed 's/[<>:"|?*]/_/g')
           
           # If no valid filename, use a default
           if [ -z "$FILE" ]; then
@@ -49,7 +48,7 @@ jobs:
           
           echo "Downloading to: $FILE"
           
-          # Download with error handling, retry, and SSL ignore
+          # Download with sanitized filename
           curl -L --insecure --fail --retry 3 --retry-delay 2 -o "$FILE" "${URL}"
           
           # Check if download succeeded
@@ -70,8 +69,8 @@ jobs:
           echo "size=$SIZE" >> $GITHUB_OUTPUT
           echo "sha256=$HASH" >> $GITHUB_OUTPUT
         env:
-          URL: ${{ inputs.URL }}
-
+          URL: ${{ inputs.URL }}     
+           
      
       - name: Split file (raw fast parts)
         id: split
