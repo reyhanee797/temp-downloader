@@ -30,18 +30,17 @@ jobs:
       - name: Update CA certificates
         run: |
            sudo apt-get update
-           sudo apt-get install --reinstall ca-certificates -y       
+           sudo apt-get install --reinstall ca-certificates -y      
       - name: Download file
         id: download
         run: |
           cd downloads
           
-          # Extract filename from URL and sanitize IMMEDIATELY
+          # Extract filename from URL
           RAW_FILENAME=$(basename "${URL}" | sed 's/\?.*//' | sed 's/#.*//')
-          # Remove ALL invalid characters: < > : " | ? *
+          # Remove ALL invalid characters
           FILE=$(echo "$RAW_FILENAME" | sed 's/[<>:"|?*]/_/g')
           
-          # If no valid filename, use a default
           if [ -z "$FILE" ]; then
             FILE="downloaded_file"
           fi
@@ -51,14 +50,8 @@ jobs:
           # Download with sanitized filename
           curl -L --insecure --fail --retry 3 --retry-delay 2 -o "$FILE" "${URL}"
           
-          # Check if download succeeded
           if [ ! -f "$FILE" ]; then
-            echo "Error: Download failed - file not created"
-            exit 1
-          fi
-          
-          if [ ! -s "$FILE" ]; then
-            echo "Error: Downloaded file is empty"
+            echo "Error: Download failed"
             exit 1
           fi
           
@@ -69,10 +62,9 @@ jobs:
           echo "size=$SIZE" >> $GITHUB_OUTPUT
           echo "sha256=$HASH" >> $GITHUB_OUTPUT
         env:
-          URL: ${{ inputs.URL }}     
-           
-     
-      - name: Split file (raw fast parts)
+          URL: ${{ inputs.URL }}
+
+      - name: Split file (sanitized parts)
         id: split
         run: |
           cd downloads
@@ -90,15 +82,19 @@ jobs:
             exit 0
           fi
 
-          # split into 99MB raw chunks
+          # Split into 99MB chunks with clean names
           split -b 99M "$FILE" "${FILE}.part."
-
+          
+          # Remove the original file
           rm "$FILE"
 
+          # Get list of part files
           PARTS_JSON=$(ls ${FILE}.part.* | jq -R . | jq -s .)
           PARTS_B64=$(echo "$PARTS_JSON" | base64 -w 0)
 
           echo "parts_b64=$PARTS_B64" >> $GITHUB_OUTPUT
+           
+      
 
       - name: Generate JSON index
         run: |
@@ -126,8 +122,8 @@ jobs:
           git config pack.window 0
           git config pack.depth 0
           git config pack.threads 1
-
-      - name: Upload as artifact (download from here)
+          
+      - name: Upload as artifact (bypasses filename issues)
         uses: actions/upload-artifact@v4
         with:
           name: downloaded-file
