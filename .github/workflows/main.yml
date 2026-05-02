@@ -30,29 +30,27 @@ jobs:
       - name: Update CA certificates
         run: |
            sudo apt-get update
-           sudo apt-get install --reinstall ca-certificates -y
-
+           sudo apt-get install --reinstall ca-certificates -y      
+           
       - name: Download file
         id: download
         run: |
           cd downloads
-
-          # Extract filename from URL and sanitize
-          RAW_FILENAME=$(basename "${URL}" | sed 's/\?.*//' | sed 's/#.*//')
-          # Remove ALL invalid characters for artifacts: < > : " | ? *
-          FILE=$(echo "$RAW_FILENAME" | sed 's/[<>:"|?*]/_/g')
-          # Also clean up slashes
-          FILE=$(echo "$FILE" | sed 's/[\\/]/_/g')
+          
+          # Extract filename from URL safely
+          RAW_FILENAME=$(basename "${URL}" | sed 's/?.*//' | sed 's/#.*//')
+          # Remove any problematic characters
+          FILE=$(echo "$RAW_FILENAME" | sed 's/[^a-zA-Z0-9._-]/_/g')
           
           # If no valid filename, use a default
-          if [ -z "$FILE" ] || [[ "$FILE" == .* ]]; then
+          if [ -z "$FILE" ]; then
             FILE="downloaded_file"
           fi
           
           echo "Downloading to: $FILE"
           
-          # Download with error handling
-          curl -L --fail --retry 3 --retry-delay 2 -o "$FILE" "${URL}"
+          # Download with error handling, retry, and SSL ignore
+          curl -L --insecure --fail --retry 3 --retry-delay 2 -o "$FILE" "${URL}"
           
           # Check if download succeeded
           if [ ! -f "$FILE" ]; then
@@ -74,6 +72,7 @@ jobs:
         env:
           URL: ${{ inputs.URL }}
 
+     
       - name: Split file (raw fast parts)
         id: split
         run: |
